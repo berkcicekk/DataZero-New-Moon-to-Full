@@ -31,7 +31,7 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 | `npm test` | GEÇİYOR — 13/13 (gerçek derlenmiş devrelerle, in-process) |
 | `npm run typecheck` | TEMİZ |
 | Git | TEMİZ, `main` ile `origin/main` senkron |
-| Son commit | `5ca1882 docs: record the Preview deployment and its on-chain proof` |
+| Son commit | `git log --oneline -1` ile bakın — burada hash tutmuyoruz, tek commit sonra eskiyor |
 | **Deploy** | **TAMAM — preview'a deploy edildi, zincir üstünde doğrulandı** |
 | Contract address | `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27` |
 | Deploy tx / blok | `691315e59a31426af0a617ad72de884d86e8dd8fb4c6880463b1a784e91057fc` / 1 025 537 |
@@ -62,10 +62,10 @@ yorum bloğu ✅. Testler üç alanı da kapsıyor: devre mantığı, state geç
 input sızmaması.
 
 **Kullanıcının elle yapacakları (spec "DO THIS MANUALLY" diyor):**
-- [ ] Faucet'ten cüzdanı fonla (deploy duraklayıp adresi yazdırınca)
+- [x] Faucet'ten cüzdanı fonla — **2026-09-26'da yapıldı**, deploy tamamlandı
 - [ ] `## Initial Idea` bölümünü doldur
 - [ ] Screenshot ekle: compile çıktısı + deploy edilmiş adres
-- [x] 5+ anlamlı commit — **12 commit var**, fazlasıyla yeterli
+- [x] 5+ anlamlı commit — **19 commit var**, fazlasıyla yeterli
 - [ ] Rise In'de public repo'yu submit et
 
 ---
