@@ -35,6 +35,33 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 | README Contract Address tablosu | BOŞ — hâlâ `[PASTE ADDRESS AFTER DEPLOY]` |
 | README `## Initial Idea` | PLACEHOLDER — **kullanıcı elle dolduracak** |
 | README `## Screenshots` | PLACEHOLDER — **kullanıcı elle ekleyecek** |
+| `.env` | HAZIR (gitignore'lu) — profil + rastgele `PRIVATE_STATE_PASSWORD` + proof server URL |
+| `managed/counter/keys` | VAR — 3 prover (~2.8 MB each) + 3 verifier, deploy proof üretebilir |
+
+### Level 1 resmî çeklisti (kaynak: `midnight_prompts.pdf` s.4, STEP 7)
+
+| # | Gereksinim | Durum |
+|---|------------|-------|
+| 1 | Kontrat `compact compile` ile derleniyor | ✅ CI'da (ubuntu runner), çıktı repoda |
+| 2 | `managed/` dizini mevcut | ✅ 16 dosya: contract + keys + zkir |
+| 3 | 3+ test geçiyor | ✅ **13** test geçiyor (istenenin 4 katı) |
+| 4 | Kontrat Preview veya Preprod'a deploy edilmiş | ❌ **KALAN TEK İŞ** |
+| 5 | Contract address README'de görünüyor | ❌ #4'e bağlı |
+| 6 | README tüm zorunlu bölümleri içeriyor | ✅ 9/9 bölüm doğrulandı |
+| 7 | Dosya yapısı spec'e uyuyor | ✅ contracts/ managed/ src/ tests/ .github/workflows/ README.md package.json |
+
+**Spec'in istediği kontrat özellikleri** — hepsi karşılanıyor:
+public ledger state ✅ (7 alan), private witness ✅ (`localSecretKey`, `localProfile`),
+bilinçli `disclose()` ✅ (3 yerde, gerekçeleri README'de), üstte public/private açıklayan
+yorum bloğu ✅. Testler üç alanı da kapsıyor: devre mantığı, state geçişleri, private
+input sızmaması.
+
+**Kullanıcının elle yapacakları (spec "DO THIS MANUALLY" diyor):**
+- [ ] Faucet'ten cüzdanı fonla (deploy duraklayıp adresi yazdırınca)
+- [ ] `## Initial Idea` bölümünü doldur
+- [ ] Screenshot ekle: compile çıktısı + deploy edilmiş adres
+- [x] 5+ anlamlı commit — **12 commit var**, fazlasıyla yeterli
+- [ ] Rise In'de public repo'yu submit et
 
 ---
 
@@ -159,6 +186,25 @@ tek bir container (proof server). Ubuntu içine `docker-ce` apt ile kurulunca:
 - [ ] Proof server ayağa kaldır, Windows'tan 6300'ü doğrula
 - [ ] (opsiyonel) Compact derleyicisini WSL'e kur
 - [ ] Deploy -> contract address -> README tablosu
+- [x] `.env` hazırlandı (reboot beklerken) — profil değerleri, 32 karakter rastgele
+      `PRIVATE_STATE_PASSWORD`, `MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6300`.
+      Cüzdan satırları bilerek boş: ilk `npm run deploy` cüzdanı kendisi üretip
+      24 kelimelik recovery phrase'i `.midnight-state.json`'a yazar.
+
+### Deploy adımı (proof server ayağa kalktıktan sonra)
+
+```powershell
+npm run deploy -- --network preview
+```
+
+Script duraklayıp cüzdan adresini yazdırır -> **kullanıcı faucet'ten fonlar**
+(https://midnight-tmnight-preview.nethermind.dev) -> script tNIGHT'ı görene kadar
+poll eder, sonra kendi devam eder ve contract address'i kutu içinde yazdırır.
+Adres ayrıca `.midnight-state.json`'a yazılır. Oradan README'deki tabloya işlenecek.
+
+**Not:** Midnight'ın public/hosted proof server'ı YOK — proof server private witness
+işlediği için yerel ve güvenilir olmak zorunda. Yani Docker'dan kaçış yolu yok,
+`MIDNIGHT_PROOF_SERVER_URL` override'ı sadece farklı bir yerel adres için.
 
 ### Reboot sonrası çalıştırılacak komutlar
 
