@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { CampaignState } from '../managed/counter/contract/index.js';
 import type { AudienceProfile } from '../src/witnesses.js';
 import { DataZeroSimulator } from './counter-simulator.js';
-import { containsBytes, randomBytes, segmentTag } from './utils.js';
+import { containsBytes, randomBytes, segmentTag, trimTrailingZeros } from './utils.js';
 
 setNetworkId('undeployed');
 
@@ -208,15 +208,21 @@ describe('DataZero — private inputs are never exposed', () => {
     sim.attest();
 
     const { text, bytes } = sim.publicStateDump();
-    const hex = (b: Uint8Array) => Buffer.from(b).toString('hex');
+    // The runtime prints ledger values with trailing zeros trimmed, so every
+    // needle has to be trimmed the same way before it is searched for.
+    const hex = (b: Uint8Array) => Buffer.from(trimTrailingZeros(b)).toString('hex');
 
     // The identity secret appears nowhere in public state, in either rendering.
-    expect(containsBytes(bytes, userKey)).toBe(false);
+    expect(containsBytes(bytes, trimTrailingZeros(userKey))).toBe(false);
     expect(text.toLowerCase()).not.toContain(hex(userKey));
 
-    // The ledger carries the nullifier, and the nullifier is not the secret.
+    // Positive control: the value the ledger *does* carry is the nullifier. If
+    // this ever stopped holding, the negative assertions above would be
+    // searching an empty haystack and would pass without proving anything.
     const tag = sim.nullifier(TRAVEL, userKey);
-    expect(containsBytes(bytes, tag)).toBe(true);
+    expect(sim.getLedger().attestations.member(tag)).toBe(true);
+    expect(containsBytes(bytes, trimTrailingZeros(tag))).toBe(true);
+    expect(text.toLowerCase()).toContain(hex(tag));
     expect(tag).not.toEqual(userKey);
 
     // The public ledger exposes an aggregate and a set of hashes — and nothing
@@ -225,6 +231,31 @@ describe('DataZero — private inputs are never exposed', () => {
     expect(Object.keys(state)).not.toContain('ageBracket');
     expect(Object.keys(state)).not.toContain('engagementScore');
     expect(state.totalInteractions).toEqual(1n);
+  });
+
+  it('finds a nullifier in public state even when it ends in a zero byte', () => {
+    // Regression guard. The runtime renders ledger values with trailing zeros
+    // trimmed, so a 32-byte nullifier ending in 0x00 prints as 31 bytes. A
+    // fixed-width search for it silently missed roughly one run in 256 — it
+    // passed locally and failed in CI. Find such a nullifier on purpose and
+    // pin the behaviour.
+    const { sim: probe } = openCampaign();
+
+    let key: Uint8Array | undefined;
+    for (let i = 0; i < 20_000 && key === undefined; i++) {
+      const candidate = randomBytes(32);
+      if (probe.nullifier(TRAVEL, candidate)[31] === 0) key = candidate;
+    }
+    expect(key, 'no trailing-zero nullifier found').toBeDefined();
+
+    const { sim } = openCampaign();
+    sim.switchUser(key!, qualifyingProfile());
+    sim.attest();
+
+    const tag = sim.nullifier(TRAVEL, key!);
+    expect(tag[31]).toEqual(0);
+    expect(sim.getLedger().attestations.member(tag)).toBe(true);
+    expect(containsBytes(sim.publicStateDump().bytes, trimTrailingZeros(tag))).toBe(true);
   });
 
   it('leaves the private state untouched when a circuit runs', () => {

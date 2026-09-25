@@ -25,6 +25,20 @@ export const segmentTag = (category: string): Uint8Array => {
 };
 
 /**
+ * Drop trailing zero bytes.
+ *
+ * The Compact runtime renders ledger values with trailing zeros trimmed — a
+ * 32-byte cell holding `"travel"` prints as six bytes, not thirty-two. Any
+ * search for a fixed-width value in that rendering has to trim the needle the
+ * same way, or a hash that happens to end in `00` silently fails to match.
+ */
+export const trimTrailingZeros = (bytes: Uint8Array): Uint8Array => {
+  let end = bytes.length;
+  while (end > 0 && bytes[end - 1] === 0) end--;
+  return bytes.subarray(0, end);
+};
+
+/**
  * Whether `haystack` contains `needle` as a contiguous run of bytes.
  *
  * Used by the privacy tests to assert that a secret never shows up anywhere in
