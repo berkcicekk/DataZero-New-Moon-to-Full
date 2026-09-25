@@ -15,8 +15,10 @@
     "cli": "npx tsx src/cli.ts",
     "check-balance": "npx tsx src/check-balance.ts",
     "network": "npx tsx src/network.ts",
-    "proof-server:start": "docker compose up -d",
-    "proof-server:stop": "docker compose down",
+    "proof-server:start": "docker compose up -d --wait proof-server",
+    "proof-server:stop": "docker compose stop proof-server",
+    "devnet:start": "docker compose up -d --wait",
+    "devnet:stop": "docker compose down",
     "clean": "node scripts/clean.mjs"
   },
   "dependencies": {

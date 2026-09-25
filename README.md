@@ -111,8 +111,12 @@ compact --version
 
 **On Windows:** the compiler is published for Linux and macOS only — there is no Windows build. Use one of:
 
-- **WSL2** (recommended): `wsl --install` from an elevated PowerShell, reboot, then run the installer above inside the Linux shell. Docker Desktop with the WSL2 backend then serves both the compiler and the proof server.
+- **WSL2**: `wsl --install` from an elevated PowerShell, reboot, then run the installer above inside the Linux shell. Docker Desktop with the WSL2 backend then serves both the compiler and the proof server.
 - **GitHub Actions**: push, and [`.github/workflows/ci.yml`](.github/workflows/ci.yml) compiles the contract, runs the test suite, and uploads `managed/counter` as a downloadable artifact.
+
+You only need either of these to *change* the contract. Running the tests and
+deploying work from a plain Windows checkout, because the generated bindings are
+committed and the proof server runs in Docker.
 
 ---
 
@@ -129,10 +133,18 @@ npm run compile             # -> managed/counter/{contract,keys,zkir}
 npm test
 ```
 
+`managed/counter/contract` is committed, so `npm test` works from a fresh clone
+without a Compact toolchain. `npm run compile` regenerates it along with the
+proving keys, and is required if you change `contracts/counter.compact`.
+
 ### Deploying
 
+Deployment needs a running proof server — but **not** the Compact compiler, as
+long as `managed/counter` is present. On Windows that means Docker Desktop is
+enough; WSL2 is only needed if you want to compile locally.
+
 ```bash
-npm run proof-server:start          # docker compose up -d
+npm run proof-server:start          # docker compose up -d --wait proof-server
 npm run deploy -- --network preview
 ```
 
@@ -155,6 +167,8 @@ Menu: open a campaign, send an attestation, read the public ledger state, close 
 | `npm run compile` | Compile `contracts/counter.compact` into `managed/counter`. |
 | `npm test` | Run the Vitest suite against the compiled circuits. |
 | `npm run typecheck` | `tsc --noEmit`. |
+| `npm run proof-server:start` | Start just the proof server (what deploying needs). |
+| `npm run devnet:start` | Start the full local stack: node, indexer and proof server. |
 | `npm run network preview` | Switch the active network. |
 | `npm run check-balance` | Wallet tNIGHT and DUST balances. |
 | `npm run clean` | Remove `managed/counter` and the local wallet/deploy state. |
