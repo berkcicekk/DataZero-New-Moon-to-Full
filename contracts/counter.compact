@@ -1,0 +1,191 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  DataZero — privacy-preserving advertising attestation counter
+//  Midnight Builder Challenge · Level 1 (New Moon)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//  WHAT IS PUBLIC (written to the Midnight ledger, readable by anyone)
+//    campaignOwner      A hash of the campaign owner's secret. Identifies the
+//                       owner without revealing the secret behind it.
+//    state              OPEN or CLOSED. Whether the campaign accepts proofs.
+//    campaignSegment    The interest segment the advertiser is targeting.
+//                       Public on purpose: it is the advertiser's own criterion,
+//                       not user data.
+//    minAgeBracket      Minimum age bracket the campaign accepts (advertiser's
+//                       own criterion, public).
+//    minEngagement      Minimum engagement score the campaign accepts
+//                       (advertiser's own criterion, public).
+//    attestations       Set of one-way nullifiers. One entry per identity that
+//                       has proven it matches this campaign. A nullifier is a
+//                       hash of (domain tag, campaign segment, user secret) and
+//                       is not invertible: it proves "someone qualified and has
+//                       not claimed before" while revealing nothing about who.
+//    totalInteractions  Aggregate count of valid attestations. The only metric
+//                       the advertiser actually needs, and the only one exposed.
+//
+//  WHAT IS PRIVATE (a witness — stays on the user's device, never on-chain)
+//    localSecretKey()   The user's 32-byte identity secret. Never leaves the
+//                       device and never appears in any ledger field.
+//    localProfile()     The user's behavioural profile: age bracket, interest
+//                       tag, and engagement score. Read inside the circuit,
+//                       compared against the public campaign criteria, and then
+//                       discarded. No field of it is ever written to the ledger.
+//
+//  WHAT THE USER PROVES WITHOUT REVEALING
+//    "My private interest tag equals the campaign's segment, my age bracket is
+//     at or above the campaign minimum, my engagement score is at or above the
+//     campaign minimum, and I have not already claimed this campaign."
+//    The proof carries exactly one public output: the nullifier. Everything
+//    else stays in the witness.
+//
+//  WHERE disclose() IS USED, AND WHY
+//    1. attest() discloses the nullifier only. It is a deliberate, minimal
+//       disclosure: the ledger needs it to enforce one-claim-per-identity, and
+//       it is a preimage-resistant hash, so publishing it leaks neither the
+//       secret key nor the profile.
+//    2. openCampaign() and the constructor disclose the advertiser's own
+//       campaign criteria and owner key. Those are the advertiser's data,
+//       published on purpose so users can check what they prove against.
+//    No circuit ever discloses a field of localProfile().
+// ─────────────────────────────────────────────────────────────────────────────
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+/** Whether the campaign is currently accepting attestations. */
+export enum CampaignState {
+  CLOSED,
+  OPEN
+}
+
+/**
+ * The user's behavioural profile. This struct only ever exists inside a
+ * circuit's private witness — it is never a ledger type.
+ *
+ *  ageBracket       1 = 18-24, 2 = 25-34, 3 = 35-44, 4 = 45-54, 5 = 55-64, 6 = 65+
+ *  interestTag      hash of an interest category, e.g. "travel", "fintech"
+ *  engagementScore  0-10000, how actively the user engages with that category
+ */
+export struct AudienceProfile {
+  ageBracket: Uint<8>;
+  interestTag: Bytes<32>;
+  engagementScore: Uint<16>;
+}
+
+// --- Public ledger state ----------------------------------------------------
+
+export ledger campaignOwner: Bytes<32>;
+export ledger state: CampaignState;
+export ledger campaignSegment: Bytes<32>;
+export ledger minAgeBracket: Uint<8>;
+export ledger minEngagement: Uint<16>;
+export ledger attestations: Set<Bytes<32>>;
+export ledger totalInteractions: Counter;
+
+// --- Private witnesses ------------------------------------------------------
+
+witness localSecretKey(): Bytes<32>;
+witness localProfile(): AudienceProfile;
+
+// --- Construction -----------------------------------------------------------
+
+constructor() {
+  // The deployer's owner key is derived from their secret and frozen here.
+  // Only the hash is disclosed; the secret itself never leaves the device.
+  campaignOwner = disclose(deriveOwnerKey(localSecretKey()));
+  state = CampaignState.CLOSED;
+  campaignSegment = default<Bytes<32>>;
+  minAgeBracket = 0;
+  minEngagement = 0;
+}
+
+// --- Key derivation (pure, no ledger access) --------------------------------
+
+/**
+ * Campaign owner identity. Domain-separated so it can never collide with a
+ * nullifier derived from the same secret.
+ */
+export pure circuit deriveOwnerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<[Bytes<17>, Bytes<32>]>([
+    "datazero:owner:v1",
+    sk
+  ]);
+}
+
+/**
+ * One-claim-per-identity tag. Binding the hash to the campaign segment means
+ * the same user produces an unlinkable nullifier for every different campaign:
+ * two campaigns cannot correlate their participants.
+ */
+export pure circuit deriveNullifier(sk: Bytes<32>, segment: Bytes<32>): Bytes<32> {
+  return persistentHash<[Bytes<21>, Bytes<32>, Bytes<32>]>([
+    "datazero:nullifier:v1",
+    segment,
+    sk
+  ]);
+}
+
+// --- Advertiser circuits ----------------------------------------------------
+
+/** Publish the campaign's targeting criteria and start accepting proofs. */
+export circuit openCampaign(
+  segment: Bytes<32>,
+  minAge: Uint<8>,
+  minScore: Uint<16>
+): [] {
+  assert(campaignOwner == deriveOwnerKey(localSecretKey()),
+         "DataZero: only the campaign owner can open a campaign");
+  assert(state == CampaignState.CLOSED,
+         "DataZero: campaign is already open");
+  assert(minAge <= 6,
+         "DataZero: age bracket must be between 0 and 6");
+
+  campaignSegment = disclose(segment);
+  minAgeBracket = disclose(minAge);
+  minEngagement = disclose(minScore);
+  state = CampaignState.OPEN;
+}
+
+/** Stop accepting proofs. The aggregate counter and nullifier set are kept. */
+export circuit closeCampaign(): [] {
+  assert(campaignOwner == deriveOwnerKey(localSecretKey()),
+         "DataZero: only the campaign owner can close a campaign");
+  assert(state == CampaignState.OPEN,
+         "DataZero: campaign is already closed");
+
+  state = CampaignState.CLOSED;
+}
+
+// --- User circuit -----------------------------------------------------------
+
+/**
+ * Prove membership of the campaign's audience without revealing the profile
+ * that qualifies you. Every comparison below runs over witness data; the only
+ * value that crosses into public state is the nullifier.
+ */
+export circuit attest(): [] {
+  assert(state == CampaignState.OPEN,
+         "DataZero: campaign is not accepting attestations");
+
+  const sk = localSecretKey();
+  const profile = localProfile();
+
+  // These three asserts are the zero-knowledge claim. They constrain the proof
+  // against private values; failing any of them makes the proof unsatisfiable,
+  // and passing them reveals nothing beyond "the constraints held".
+  assert(profile.interestTag == campaignSegment,
+         "DataZero: profile does not match the campaign segment");
+  assert(profile.ageBracket >= minAgeBracket,
+         "DataZero: age bracket below the campaign minimum");
+  assert(profile.engagementScore >= minEngagement,
+         "DataZero: engagement score below the campaign minimum");
+
+  // The single deliberate disclosure in the user flow.
+  const tag = disclose(deriveNullifier(sk, campaignSegment));
+
+  assert(!attestations.member(tag),
+         "DataZero: this identity has already attested to the campaign");
+
+  attestations.insert(tag);
+  totalInteractions.increment(1);
+}
