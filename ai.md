@@ -57,7 +57,7 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 
 **Spec'in istediği kontrat özellikleri** — hepsi karşılanıyor:
 public ledger state ✅ (7 alan), private witness ✅ (`localSecretKey`, `localProfile`),
-bilinçli `disclose()` ✅ (3 yerde, gerekçeleri README'de), üstte public/private açıklayan
+bilinçli `disclose()` ✅ (3 devrede, 5 çağrı; gerekçeleri README'de), üstte public/private açıklayan
 yorum bloğu ✅. Testler üç alanı da kapsıyor: devre mantığı, state geçişleri, private
 input sızmaması.
 
@@ -113,7 +113,7 @@ scripts/clean.mjs
 **Private witness:** `localSecretKey(): Bytes<32>`, `localProfile(): AudienceProfile`
 (`ageBracket`, `interestTag`, `engagementScore`) — hiçbir alanı ledger'a yazılmaz.
 
-**`disclose()` yalnızca 3 yerde:** constructor'da owner key hash'i, `openCampaign`'de
+**`disclose()` yalnızca 3 devrede (5 çağrı):** constructor'da owner key hash'i, `openCampaign`'de
 reklamverenin kendi kriterleri, `attest`'te sadece nullifier. Profil alanı hiçbir zaman
 disclose edilmez.
 

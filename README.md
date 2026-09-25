@@ -86,7 +86,8 @@ The advertiser learns that the statement is true. They do not learn the age brac
 
 **Where `disclose()` is used, and why**
 
-`counter.compact` calls `disclose()` in exactly three places, each deliberate:
+`counter.compact` discloses in exactly three circuits — five call sites, because
+`openCampaign` publishes three separate criteria. Each is deliberate:
 
 1. **The constructor** discloses `deriveOwnerKey(localSecretKey())` — a hash, not the secret. Without it there would be no way to check ownership later.
 2. **`openCampaign`** discloses the segment, minimum age bracket and minimum engagement score. These are the advertiser's inputs, published on purpose.
