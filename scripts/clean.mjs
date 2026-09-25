@@ -10,6 +10,9 @@ const targets = [
   "managed/counter",
   ".midnight-state.json",
   ".midnight-wallet-state",
+  // The private-state LevelDB. Left behind, a stale identity secret would be
+  // reused by the next deploy, so a "clean" that skips it is not clean.
+  "midnight-level-db",
 ];
 
 let failed = false;

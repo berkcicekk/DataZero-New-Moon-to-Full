@@ -51,7 +51,12 @@ pids/
 # Coverage directory
 coverage/
 
-# Private state
+# Private state.
+# levelPrivateStateProvider writes to midnight-level-db/ regardless of the
+# privateStateStoreName passed to it (that name is a namespace *inside* the
+# LevelDB, not the directory). This directory holds the encrypted identity
+# secret and the local profile - the private witness. Never commit it.
+midnight-level-db/
 *-state/
 
 # Temporary files
