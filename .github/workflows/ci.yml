@@ -54,6 +54,9 @@ jobs:
         run: npm test
 
       - name: Upload compiled circuits
+        # Runs even when the tests fail: the artifact is how a Windows
+        # checkout gets a usable managed/ without a local Compact compiler.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: managed-counter
