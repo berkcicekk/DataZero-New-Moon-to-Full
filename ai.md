@@ -4,8 +4,9 @@
 > **yapılanları buraya işle**. Amaç: bir sonraki oturumun sıfırdan keşif yapmadan kaldığı
 > yerden devam etmesi. İnsan odaklı anlatım `README.md`'de; burası durum + karar kaydı.
 
-**Son güncelleme:** 2026-09-26 (Oturum 3 — **preview deploy TAMAM**, Level 1'in kod
-tarafı bitti; yalnızca kullanıcının elle yapacakları kaldı)
+**Son güncelleme:** 2026-09-26 (Oturum 3 — **Level 1 TAMAM ve 7/7 doğrulandı**.
+Kalan: kullanıcının elle yapacağı 3 iş. **Yarın buradan devam:** §6 "Yarın nereden
+devam edilecek")
 
 ---
 
@@ -41,6 +42,8 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 | `.env` | HAZIR (gitignore'lu) — profil + rastgele `PRIVATE_STATE_PASSWORD` + proof server URL |
 | `managed/counter/keys` | VAR — 3 prover (~2.8 MB each) + 3 verifier, deploy proof üretebilir |
 | Proof server | Docker Desktop üzerinde çalışıyor (`datazero-proof-server`, :6300) |
+| **Level 1 doğrulaması** | **7/7 madde bağımsız doğrulandı** (PDF çeklisti + CI + zincir + public repo) — bkz. §9 |
+| CI | Son 3 run **success**: compile + typecheck + test adımları yeşil |
 | Deploy edilen kontratla etkileşim | HENÜZ DENENMEDİ — `npm run cli` ile openCampaign/attest koşulmadı |
 
 ### Level 1 resmî çeklisti (kaynak: `midnight_prompts.pdf` s.4, STEP 7)
@@ -141,7 +144,8 @@ disclose edilmez.
 | WSL | WSL 2 çalışıyor; tek distro **`docker-desktop`** (Docker Desktop'ın kendi distrosu). Ubuntu kurulmadı — **gerek kalmadı** |
 | `VirtualMachinePlatform` | **ETKİN** |
 | Sanallaştırma (VT-x) | **AÇIK** |
-| `gh` CLI | YOK -> CI durumu terminalden doğrulanamıyor |
+| `gh` CLI | YOK — ama **gerekmiyor**, CI durumu public GitHub API'siyle doğrulanıyor (aşağıda) |
+| PDF okuma | `Read` tool'u PDF *render* edemiyor (pdftoppm yok). `pdftotext -layout` **var** (`/mingw64/bin`) — `midnight_prompts.pdf`'i böyle okuyun |
 | Admin yetkisi | **VAR** — `BLUENETWORK\bluen` yerel Administrators üyesi. Sadece oturumlar elevated değil; UAC ile yükseltilebilir. |
 
 > **2026-09-26'da çözüldü:** Makine yeniden başlatıldı ve Docker Desktop kuruldu.
@@ -165,12 +169,47 @@ runner'da derliyor, test ediyor ve `managed/counter`'ı artifact olarak yüklüy
 **Deploy için Compact GEREKMİYOR** — `managed/counter` mevcutsa yeterli olan tek şey
 çalışan bir **proof server**. Docker Desktop kurulduğu için bu artık sorun değil.
 
+**CI durumunu `gh` CLI olmadan okuma** (repo public olduğu için token gerekmez):
+
+```bash
+# son run'lar
+curl -s "https://api.github.com/repos/berkcicekk/DataZero-New-Moon-to-Full/actions/runs?per_page=3"
+# bir run'in adim adim sonucu: yukaridaki cevaptaki jobs_url'i GET et
+```
+
+Adım adım sonuç, "compile gerçekten koştu mu" sorusunun tek gerçek kanıtı — 2026-09-26'da
+`Compile contracts/counter.compact` adımının yeşil olduğu böyle doğrulandı.
+
 ---
 
-## 6. Aktif İş — Preview Deploy
+## 6. Aktif İş — Level 1 kapandı, sırada Level 2
 
-**Hedef:** `npm run deploy -- --network preview` ile contract address almak, README
-tablosunu doldurmak, Level 1'i kapatmak.
+### Yarın nereden devam edilecek
+
+**Level 1'in kodla ilgili hiçbir işi kalmadı.** Kalan 3 iş kullanıcının elinde:
+
+1. [ ] README `## Initial Idea` bölümünü doldur (placeholder duruyor, spec bunu
+       "kendim yazacağım" diye işaretliyor)
+2. [ ] Screenshot ekle: `compact compile` çıktısı + deploy adres kutusu.
+       Deploy çıktısını yeniden üretmek için deploy'u tekrar koşmak gerekmez —
+       adres `.midnight-state.json`'da ve README'de.
+3. [ ] Rise In'de public repo'yu submit et
+
+**Level 2'ye geçilecekse önce bunu bilin:** L2'nin prompt'u
+`My Preprod contract address is:` diye soruyor, yani **Preprod deploy'u gerekiyor.**
+L1 "Preview veya Preprod" kabul ettiği için L1'de eksik yok, ama L2 için:
+
+```powershell
+npm run proof-server:start
+npm run deploy -- --network preprod
+```
+
+Preprod'un faucet'i ayrı: https://midnight-tmnight-preprod.nethermind.dev
+`getOrCreateWallet` her ağ için ayrı cüzdan üretir, yani preprod cüzdanı sıfırdan
+fonlanacak. Preview'da cüzdan senkronizasyonu ~11 dakika sürmüştü; preprod'da da
+benzer bir bekleme bekleyin ve `MIDNIGHT_FAUCET_TIMEOUT_MS`'i baştan yükseltin.
+
+### Level 1 için yapılanlar (tamamlandı)
 
 **Blokaj kalktı (2026-09-26):** Docker Desktop 4.91.0 kurulu ve çalışıyor.
 WSL'e Docker CE kurma planı gereksizleşti; `docker compose up -d --wait proof-server`
@@ -310,6 +349,32 @@ gerekir. Kontrat değişmediği sürece gerek yok — CI zaten derliyor.
   bir doğrulama curl komutu eklendi
 - Level 1 resmî çeklistinin 7 maddesi de ✅. Kalan: kullanıcının elle yapacakları
   (`## Initial Idea`, screenshot, Rise In submit)
+
+**Aynı oturumda ikinci tur — bağımsız doğrulama** (kullanıcı "L1 gerçekten tamam mı?"
+diye sordu; `ai.md`'nin kendi özetine güvenilmedi, her madde sıfırdan kontrol edildi):
+
+- Resmî çeklist **PDF'ten okundu** (`pdftotext -layout midnight_prompts.pdf`), STEP 4–7
+  gereksinimleri birebir karşılaştırıldı. `ai.md`'deki transkripsiyon doğru çıktı.
+- README'nin **9 zorunlu bölümü** tek tek arandı -> 9/9 var. Privacy Model'in
+  PUBLIC / PRIVATE / PROVES üç alt maddesi de yerinde.
+- Kontrat STEP 5 a–d: **7** `export ledger` alanı, **2** `witness`, `disclose()`,
+  üstte public/private yorum bloğu -> hepsi var.
+- **CI GitHub public API'siyle doğrulandı** (`gh` CLI'a gerek kalmadı): son 3 run
+  success, `Compile contracts/counter.compact` adımı yeşil. Bu, "kontrat
+  `compact compile` ile derleniyor" maddesinin gerçek kanıtı — yerelde derleyici yok.
+- Adresin **public repo'da** göründüğü `raw.githubusercontent.com` üzerinden doğrulandı
+  (yerel README'nin dolu olması push edildiği anlamına gelmez).
+- Zincir üstü doğrulama yine yapıldı: indexer `ContractDeploy` + tx + blok döndürdü.
+
+**Doğrulamada bulunan ve düzeltilen hata:** README "`disclose()` **tam üç yerde**"
+diyordu; gerçek sayı **3 devrede 5 çağrı** (`openCampaign` üç kriteri ayrı ayrı
+açıyor). Hemen altındaki 3'lü liste doğruyu anlatıyordu, yani çelişki giriş
+cümlesindeydi. Gizlilik yüzeyi bir değerlendiricinin kontrata karşı en çok kontrol
+edeceği iddia olduğu için düzeltildi (`4c418be`).
+
+**Ayrıca düzeltildi:** deploy'un oluşturduğu `midnight-level-db/` — private witness'ı
+(şifrelenmiş kimlik sırrı + yerel profil) tutuyor — ne gitignore'luydu ne de
+`npm run clean` siliyordu. Detay §7'de, commit `7bb39fd`.
 
 ### 2026-09-25 — Oturum 2
 - Proje durumu doğrulandı: testler 13/13 geçiyor, typecheck temiz, git senkron
