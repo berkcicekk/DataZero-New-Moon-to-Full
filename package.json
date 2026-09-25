@@ -51,5 +51,8 @@
     "zero-knowledge",
     "privacy",
     "advertising"
-  ]
+  ],
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }

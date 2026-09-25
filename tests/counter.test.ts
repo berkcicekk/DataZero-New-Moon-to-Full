@@ -51,7 +51,18 @@ describe('DataZero — deployment and campaign setup', () => {
     const secret = randomBytes(32);
     const a = new DataZeroSimulator(secret, advertiserProfile());
     const b = new DataZeroSimulator(secret, advertiserProfile());
-    expect(a.getLedger()).toEqual(b.getLedger());
+
+    // The Ledger object is a live view backed by WASM handles, so comparing
+    // two of them structurally compares handles, not contents. The serialized
+    // public state is the contract's real output, and that is what has to
+    // match: same deployer secret, byte-identical ledger.
+    expect(a.publicStateDump().text).toEqual(b.publicStateDump().text);
+    expect(a.getLedger().campaignOwner).toEqual(b.getLedger().campaignOwner);
+
+    // A different secret must produce a different owner key, or the assertion
+    // above would hold for any two deployments and prove nothing.
+    const other = new DataZeroSimulator(randomBytes(32), advertiserProfile());
+    expect(other.getLedger().campaignOwner).not.toEqual(a.getLedger().campaignOwner);
   });
 
   it('starts closed, with no attestations and a zero counter', () => {

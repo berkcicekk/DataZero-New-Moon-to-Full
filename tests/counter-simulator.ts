@@ -100,45 +100,31 @@ export class DataZeroSimulator {
   // --- Public-state inspection ----------------------------------------------
 
   /**
-   * Everything the chain would hold for this contract, flattened for leak
-   * hunting: a text rendering plus every byte string found in the encoded
-   * state. If a secret ever reached the ledger it would have to show up in one
-   * of the two.
+   * Everything the chain would hold for this contract, in two forms: the
+   * runtime's own full rendering, and every byte run in it concatenated.
+   *
+   * `toString(false)` is the complete dump. `encode()` is not: it elides the
+   * contents of map-backed state, which would silently make a leak hunt pass
+   * vacuously because the nullifier set is exactly where a leak would land.
+   * Every value in the rendering is printed as `<[hex]: alignment>`, so
+   * pulling the bracketed hex runs out yields the full public byte image -
+   * cells and nullifier-set keys alike.
    */
   public publicStateDump(): { text: string; bytes: Uint8Array } {
-    const state = this.circuitContext.currentQueryContext.state.state;
-    const chunks: Uint8Array[] = [];
+    const text = this.circuitContext.currentQueryContext.state.state.toString(false);
 
-    const walk = (node: unknown): void => {
-      if (node == null) return;
-      if (node instanceof Uint8Array) {
-        chunks.push(node);
-        return;
-      }
-      if (ArrayBuffer.isView(node)) {
-        const view = node as ArrayBufferView;
-        chunks.push(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
-        return;
-      }
-      if (Array.isArray(node)) {
-        node.forEach(walk);
-        return;
-      }
-      if (typeof node === 'object') {
-        Object.values(node as Record<string, unknown>).forEach(walk);
-      }
-    };
+    const runs = [...text.matchAll(/\[([0-9a-fA-F]*)\]/g)]
+      .map((m) => m[1])
+      .filter((hex) => hex.length > 0 && hex.length % 2 === 0)
+      .map((hex) => Uint8Array.from(Buffer.from(hex, 'hex')));
 
-    walk(state.encode());
-
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const bytes = new Uint8Array(total);
+    const bytes = new Uint8Array(runs.reduce((n, r) => n + r.length, 0));
     let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.length;
+    for (const run of runs) {
+      bytes.set(run, offset);
+      offset += run.length;
     }
 
-    return { text: state.toString(), bytes };
+    return { text, bytes };
   }
 }
