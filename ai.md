@@ -30,6 +30,8 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 |---------|-------|
 | `npm test` | GEÇİYOR — 13/13 (gerçek derlenmiş devrelerle, in-process) |
 | `npm run typecheck` | TEMİZ |
+| Git | TEMİZ, `main` ile `origin/main` senkron |
+| Son commit | `5ca1882 docs: record the Preview deployment and its on-chain proof` |
 | **Deploy** | **TAMAM — preview'a deploy edildi, zincir üstünde doğrulandı** |
 | Contract address | `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27` |
 | Deploy tx / blok | `691315e59a31426af0a617ad72de884d86e8dd8fb4c6880463b1a784e91057fc` / 1 025 537 |
