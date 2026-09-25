@@ -4,7 +4,8 @@
 > **yapılanları buraya işle**. Amaç: bir sonraki oturumun sıfırdan keşif yapmadan kaldığı
 > yerden devam etmesi. İnsan odaklı anlatım `README.md`'de; burası durum + karar kaydı.
 
-**Son güncelleme:** 2026-09-25 (Oturum 2 — WSL kurulumu reboot bekliyor)
+**Son güncelleme:** 2026-09-26 (Oturum 3 — **preview deploy TAMAM**, Level 1'in kod
+tarafı bitti; yalnızca kullanıcının elle yapacakları kaldı)
 
 ---
 
@@ -29,14 +30,16 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 |---------|-------|
 | `npm test` | GEÇİYOR — 13/13 (gerçek derlenmiş devrelerle, in-process) |
 | `npm run typecheck` | TEMİZ |
-| Git çalışma ağacı | TEMİZ, `main` ile `origin/main` senkron |
-| Son commit | `d6787a5 fix(test): trim trailing zeros before searching the public state dump` |
-| Deploy | YAPILMADI — `.midnight-state.json` ve `.env` yok |
-| README Contract Address tablosu | BOŞ — hâlâ `[PASTE ADDRESS AFTER DEPLOY]` |
+| **Deploy** | **TAMAM — preview'a deploy edildi, zincir üstünde doğrulandı** |
+| Contract address | `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27` |
+| Deploy tx / blok | `691315e59a31426af0a617ad72de884d86e8dd8fb4c6880463b1a784e91057fc` / 1 025 537 |
+| README Contract Address tablosu | DOLDURULDU — adres + tx + blok + doğrulama curl'ü |
 | README `## Initial Idea` | PLACEHOLDER — **kullanıcı elle dolduracak** |
 | README `## Screenshots` | PLACEHOLDER — **kullanıcı elle ekleyecek** |
 | `.env` | HAZIR (gitignore'lu) — profil + rastgele `PRIVATE_STATE_PASSWORD` + proof server URL |
 | `managed/counter/keys` | VAR — 3 prover (~2.8 MB each) + 3 verifier, deploy proof üretebilir |
+| Proof server | Docker Desktop üzerinde çalışıyor (`datazero-proof-server`, :6300) |
+| Deploy edilen kontratla etkileşim | HENÜZ DENENMEDİ — `npm run cli` ile openCampaign/attest koşulmadı |
 
 ### Level 1 resmî çeklisti (kaynak: `midnight_prompts.pdf` s.4, STEP 7)
 
@@ -45,8 +48,8 @@ kanıtlar; reklamveren yalnızca **toplam nitelikli etkileşim sayısını** ö�
 | 1 | Kontrat `compact compile` ile derleniyor | ✅ CI'da (ubuntu runner), çıktı repoda |
 | 2 | `managed/` dizini mevcut | ✅ 16 dosya: contract + keys + zkir |
 | 3 | 3+ test geçiyor | ✅ **13** test geçiyor (istenenin 4 katı) |
-| 4 | Kontrat Preview veya Preprod'a deploy edilmiş | ❌ **KALAN TEK İŞ** |
-| 5 | Contract address README'de görünüyor | ❌ #4'e bağlı |
+| 4 | Kontrat Preview veya Preprod'a deploy edilmiş | ✅ preview, blok 1 025 537 |
+| 5 | Contract address README'de görünüyor | ✅ tx hash + doğrulama komutuyla birlikte |
 | 6 | README tüm zorunlu bölümleri içeriyor | ✅ 9/9 bölüm doğrulandı |
 | 7 | Dosya yapısı spec'e uyuyor | ✅ contracts/ managed/ src/ tests/ .github/workflows/ README.md package.json |
 
@@ -129,16 +132,20 @@ disclose edilmez.
 
 ## 5. Ortam Kısıtları (bu makine)
 
-| Araç | Durum (2026-09-25) |
+| Araç | Durum (2026-09-26) |
 |------|--------------------|
 | Compact compiler | Windows'ta YOK — Windows build'i mevcut değil (sadece Linux/macOS) |
-| WSL | WSL **2.7.14.0** (Store/MSIX sürümü) kurulu, çekirdek 6.18.33.2-2. **Distro yok** -> kurulum sürüyor, bkz. §6 |
-| `VirtualMachinePlatform` | **ETKİN** (InstallState=1) |
-| `Microsoft-Windows-Subsystem-Linux` | Etkinleştirildi ama **reboot bekliyor** (`RebootPending=True`) |
-| Sanallaştırma (VT-x) | **AÇIK.** VBS çalışıyor (`VirtualizationBasedSecurityStatus=2`), yani hipervizör ayakta |
-| Docker | YOK — ne PATH'te ne Program Files / LOCALAPPDATA altında |
+| **Docker** | **VAR — Docker Desktop 4.91.0, engine 29.8.0, çalışıyor.** Context: `desktop-linux` |
+| WSL | WSL 2 çalışıyor; tek distro **`docker-desktop`** (Docker Desktop'ın kendi distrosu). Ubuntu kurulmadı — **gerek kalmadı** |
+| `VirtualMachinePlatform` | **ETKİN** |
+| Sanallaştırma (VT-x) | **AÇIK** |
 | `gh` CLI | YOK -> CI durumu terminalden doğrulanamıyor |
 | Admin yetkisi | **VAR** — `BLUENETWORK\bluen` yerel Administrators üyesi. Sadece oturumlar elevated değil; UAC ile yükseltilebilir. |
+
+> **2026-09-26'da çözüldü:** Makine yeniden başlatıldı ve Docker Desktop kuruldu.
+> §6'daki "WSL'e Docker CE kur" planı **terk edildi** — Docker Desktop zaten proof
+> server'ı çalıştırıyor. Ubuntu distrosu yalnızca *yerelde Compact derlemek* için
+> gerekli olurdu; kontrat değişmediği sürece buna ihtiyaç yok (bkz. aşağıdaki not).
 
 > **DÜZELTME:** Önceki notlarda "kullanıcı hesabı admin değil" yazıyordu — **yanlış**.
 > Hesap admin grubunda. Ayrıca `Win32_Processor.VirtualizationFirmwareEnabled=False`
@@ -154,98 +161,97 @@ runner'da derliyor, test ediyor ve `managed/counter`'ı artifact olarak yüklüy
 `managed/counter`'a açılınca testler ve deploy Windows'ta yerelde çalışır.
 
 **Deploy için Compact GEREKMİYOR** — `managed/counter` mevcutsa yeterli olan tek şey
-çalışan bir **proof server**. O da Docker istiyor; asıl blokaj bu.
+çalışan bir **proof server**. Docker Desktop kurulduğu için bu artık sorun değil.
 
 ---
 
-## 6. Aktif İş — WSL2 + Docker Kurulumu
+## 6. Aktif İş — Preview Deploy
 
-**Hedef:** Proof server'ı ayağa kaldırıp `npm run deploy -- --network preview` ile
-contract address almak, README tablosunu doldurmak, Level 1'i kapatmak.
+**Hedef:** `npm run deploy -- --network preview` ile contract address almak, README
+tablosunu doldurmak, Level 1'i kapatmak.
 
-**Seçilen strateji: Docker Desktop DEĞİL, WSL içine Docker CE.**
+**Blokaj kalktı (2026-09-26):** Docker Desktop 4.91.0 kurulu ve çalışıyor.
+WSL'e Docker CE kurma planı gereksizleşti; `docker compose up -d --wait proof-server`
+doğrudan çalışıyor.
 
-Gerekçe: Docker Desktop kurulumu ağır ve lisans kısıtları var; ihtiyacımız olan tek şey
-tek bir container (proof server). Ubuntu içine `docker-ce` apt ile kurulunca:
-- Proof server WSL'de çalışır, **WSL2 localhost forwarding** sayesinde Windows'tan
-  `http://127.0.0.1:6300` olarak erişilir (`.env` içindeki `MIDNIGHT_PROOF_SERVER_URL`
-  zaten bu adresi bekliyor) — yani `deploy.ts` Windows'ta koşmaya devam edebilir.
-- **Bonus:** Compact derleyicisi (Linux binary) aynı WSL'e kurulabilir -> yerelde
-  `compact compile` mümkün olur, CI-artifact bağımlılığı ortadan kalkar.
+### Proof server'ı başlatma
+
+```powershell
+npm run proof-server:start     # docker compose up -d --wait proof-server
+```
+
+Container adı `datazero-proof-server`, port 6300. `--wait` healthcheck'i bekler
+(`/dev/tcp` probe'u, bkz. docker-compose.yml yorumları), "Healthy" yazınca hazır.
 
 ### İlerleme
 
-- [x] Ortam teşhisi: WSL 2.7.14 kurulu, `VirtualMachinePlatform` etkin, VT-x açık,
-      hesap admin grubunda
-- [x] `wsl --install -d Ubuntu-24.04 --no-launch` çalıştırıldı ->
-      `Microsoft-Windows-Subsystem-Linux` özelliği etkinleştirildi,
-      **"değişiklikler yeniden başlatmaya kadar etkili olmayacak"**, `RebootPending=True`
-- [ ] **<- BURADA KALINDI: makinenin yeniden başlatılması gerekiyor**
-- [ ] Reboot sonrası: distro kurulumu
-- [ ] Ubuntu içine Docker CE
-- [ ] Proof server ayağa kaldır, Windows'tan 6300'ü doğrula
-- [ ] (opsiyonel) Compact derleyicisini WSL'e kur
-- [ ] Deploy -> contract address -> README tablosu
-- [x] `.env` hazırlandı (reboot beklerken) — profil değerleri, 32 karakter rastgele
-      `PRIVATE_STATE_PASSWORD`, `MIDNIGHT_PROOF_SERVER_URL=http://127.0.0.1:6300`.
-      Cüzdan satırları bilerek boş: ilk `npm run deploy` cüzdanı kendisi üretip
-      24 kelimelik recovery phrase'i `.midnight-state.json`'a yazar.
+- [x] Reboot yapıldı, **Docker Desktop kuruldu ve çalışıyor**
+- [x] `midnightntwrk/proof-server:8.1.0` indirildi, container **healthy**
+- [x] `npm test` -> 13/13 geçiyor (Docker kurulumu hiçbir şeyi bozmadı)
+- [x] `npm run deploy -- --network preview` çalıştırıldı; preview cüzdanı üretildi,
+      24 kelimelik recovery phrase `.midnight-state.json`'a yazıldı
+- [x] Kullanıcı faucet'ten fonladı
+- [x] **Deploy TAMAMLANDI** — contract address alındı, indexer'dan `ContractDeploy`
+      olarak doğrulandı
+- [x] README Contract Address tablosu dolduruldu (adres + tx + blok + curl doğrulaması)
+- [ ] `## Initial Idea` + Screenshots (**kullanıcı elle**)
+- [ ] Rise In submit (**kullanıcı elle**)
+- [ ] (opsiyonel) `npm run cli` ile deploy edilmiş kontrat üzerinde openCampaign +
+      attest koşup gerçek zincirde çalıştığını göstermek — iyi bir screenshot kaynağı
 
-### Deploy adımı (proof server ayağa kalktıktan sonra)
+### Deploy sonucu (2026-09-26)
 
-```powershell
-npm run deploy -- --network preview
-```
+| | |
+|---|---|
+| Ağ | preview |
+| Contract address | `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27` |
+| Deploy tx | `691315e59a31426af0a617ad72de884d86e8dd8fb4c6880463b1a784e91057fc` |
+| Blok | 1 025 537 |
+| Deployer | `mn_addr_preview1mu3x3q4vscpkqk63p36e6ss0qs0s3t5kqjl2epetgvpdyh8rcdgsjd80nm` |
 
-Script duraklayıp cüzdan adresini yazdırır -> **kullanıcı faucet'ten fonlar**
-(https://midnight-tmnight-preview.nethermind.dev) -> script tNIGHT'ı görene kadar
-poll eder, sonra kendi devam eder ve contract address'i kutu içinde yazdırır.
-Adres ayrıca `.midnight-state.json`'a yazılır. Oradan README'deki tabloya işlenecek.
-
-**Not:** Midnight'ın public/hosted proof server'ı YOK — proof server private witness
-işlediği için yerel ve güvenilir olmak zorunda. Yani Docker'dan kaçış yolu yok,
-`MIDNIGHT_PROOF_SERVER_URL` override'ı sadece farklı bir yerel adres için.
-
-### Reboot sonrası çalıştırılacak komutlar
-
-```powershell
-# 1) Distro kurulumu. --no-launch SART: ilk acilis interaktif kullanici/parola sorar
-#    ve non-interactive oturumda kilitlenir.
-wsl --install -d Ubuntu-24.04 --no-launch
-
-# 2) root olarak kullanici olusturmadan ilerle (interaktif OOBE'yi atla)
-wsl -d Ubuntu-24.04 -u root -- echo ok
-```
+Zincir üstünde bağımsız doğrulama (yerel kurulum gerekmez, `ContractDeploy` döner):
 
 ```bash
-# 3) Docker CE (Ubuntu icinde, root olarak)
-wsl -d Ubuntu-24.04 -u root -- bash -lc '
-  apt-get update &&
-  apt-get install -y ca-certificates curl &&
-  install -m 0755 -d /etc/apt/keyrings &&
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc &&
-  chmod a+r /etc/apt/keyrings/docker.asc &&
-  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list &&
-  apt-get update &&
-  apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin'
-
-# 4) Docker daemon'i baslat (WSL'de systemd olmayabilir -> dogrudan dockerd)
-wsl -d Ubuntu-24.04 -u root -- bash -lc 'dockerd > /var/log/dockerd.log 2>&1 &'
-wsl -d Ubuntu-24.04 -u root -- docker version
-
-# 5) Proof server
-wsl -d Ubuntu-24.04 -u root -- docker run -d --name datazero-proof-server \
-  -p 6300:6300 midnightntwrk/proof-server:8.1.0 midnight-proof-server -v
+curl -s https://indexer.preview.midnight.network/api/v4/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ contractAction(address:\"3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27\") { __typename address transaction { hash block { height } } } }"}'
 ```
 
-```powershell
-# 6) Windows tarafindan dogrula
-curl.exe -sS http://127.0.0.1:6300/health
+> Indexer şemasında `ContractAction` üzerinde **`chainState` alanı yok** — sorguya
+> eklemek `Unknown field` hatası verir. Çalışan alanlar: `__typename`, `address`,
+> `state`, `transaction { hash block { height timestamp } }`.
+
+### Preview cüzdanı
+
+```
+mn_addr_preview1mu3x3q4vscpkqk63p36e6ss0qs0s3t5kqjl2epetgvpdyh8rcdgsjd80nm
 ```
 
-**Dikkat:** WSL'de systemd varsayılan olarak kapalıysa `systemctl start docker`
-çalışmaz. `/etc/wsl.conf` içine `[boot]\nsystemd=true` yazıp `wsl --shutdown` ile
-yeniden başlatmak kalıcı çözüm; hızlı yol yukarıdaki doğrudan `dockerd &`.
+Faucet: https://midnight-tmnight-preview.nethermind.dev
+
+Script tNIGHT'ı görene kadar 10 saniyede bir poll eder (varsayılan timeout 10 dk;
+`MIDNIGHT_FAUCET_TIMEOUT_MS` ile uzatılabilir — bu oturumda 1 saate çekildi), sonra
+DUST kaydı yapıp deploy eder ve contract address'i kutu içinde yazdırır. Adres ayrıca
+`.midnight-state.json`'a yazılır.
+
+**Adresi senkronizasyon beklemeden öğrenme:** deploy script'i adresi ancak sync
+bittikten sonra yazdırıyor (preview'da ~10 dk sürebilir). Aynı adres `.midnight-state.json`
+içindeki seed'den tamamen yerel olarak türetilebilir — `src/wallet.ts`'teki
+`HDWallet.fromSeed -> selectAccount(0) -> Roles.NightExternal -> createKeystore ->
+getBech32Address()` zinciri, öncesinde `setNetworkId('preview')`. Böyle bir yardımcı
+script'i **proje kökünde** çalıştırın; `node_modules` çözümlemesi dosyanın bulunduğu
+dizine göre yapıldığı için proje dışındaki bir yoldan çalışmaz.
+
+**Not:** Midnight'ın public/hosted proof server'ı YOK — proof server private witness
+işlediği için yerel ve güvenilir olmak zorunda. `MIDNIGHT_PROOF_SERVER_URL` override'ı
+sadece farklı bir yerel adres için.
+
+### Yerelde Compact derlemek (opsiyonel, henüz yapılmadı)
+
+Kontratı *değiştirmek* gerekirse Linux compiler'a ihtiyaç var. Docker Desktop zaten
+WSL2 kullanıyor ama kendi `docker-desktop` distrosu genel amaçlı değil; ayrı bir
+Ubuntu kurup (`wsl --install -d Ubuntu-24.04 --no-launch`) compiler'ı oraya kurmak
+gerekir. Kontrat değişmediği sürece gerek yok — CI zaten derliyor.
 
 ---
 
@@ -258,6 +264,13 @@ yeniden başlatmak kalıcı çözüm; hızlı yol yukarıdaki doğrudan `dockerd
   oluyor. `d6787a5` bunu düzeltti (aramadan önce trailing zero trim).
 - `managed/counter/contract` bilerek commit'li — silmeyin, temiz clone'da `npm test`
   bunun üzerinde çalışıyor. `keys/` ve `zkir/` gitignore'lu.
+- **Private state dizininin adı `privateStateStoreName` DEĞİL.** `deploy.ts`/`cli.ts`
+  `privateStateStoreName: 'datazero-state'` geçiyor ama `levelPrivateStateProvider`
+  diske **`midnight-level-db/`** yazıyor; o isim LevelDB *içindeki* bir ad alanı.
+  `.gitignore`'daki `*-state/` kalıbı bunu yakalamıyordu -> şifrelenmiş kimlik sırrı
+  `git add -A` ile commit edilebilirdi. 2026-09-26'da `midnight-level-db/` hem
+  `.gitignore`'a hem de `scripts/clean.mjs` hedeflerine eklendi. Yeni bir provider
+  eklerken diskte **gerçekte** hangi dizinin oluştuğunu doğrulayın.
 
 ---
 
@@ -269,10 +282,32 @@ yeniden başlatmak kalıcı çözüm; hızlı yol yukarıdaki doğrudan `dockerd
 | 2026-09-25 | CI artifact'i `if: always()` ile yüklenecek | Test patlasa bile derlenmiş devreler indirilebilsin |
 | 2026-09-25 | Public-network deploy'da sadece proof server başlatılacak | Tam devnet (node+indexer) gereksiz ve ağır |
 | 2026-09-25 | `ai.md` oturumlar arası hafıza olarak tutulacak | Her oturumda sıfırdan keşif yapılmasın |
+| 2026-09-26 | Proof server **Docker Desktop** üzerinde çalıştırılacak, WSL'e Docker CE kurulmayacak | Docker Desktop zaten kurulu ve çalışıyor; tek container için ikinci bir Docker kurulumu gereksiz karmaşıklık |
+| 2026-09-26 | README'ye contract address'in yanına tx hash + doğrulama curl'ü eklenecek | Jüri adresi zincir üstünde kendi doğrulayabilsin, yerel kurulum gerekmesin |
 
 ---
 
 ## 9. Oturum Günlüğü
+
+### 2026-09-26 — Oturum 3 · **Level 1 kod tarafı kapandı**
+- Reboot yapılmış ve **Docker Desktop 4.91.0 kurulmuş** bulundu -> WSL'e Docker CE
+  kurma planı terk edildi (§6 yeniden yazıldı). Tek WSL distrosu `docker-desktop`.
+- `docker compose up -d --wait proof-server` -> imaj indirildi, container **healthy**
+- `npm test` -> 13/13 geçti (Docker kurulumu hiçbir şeyi bozmadı)
+- `npm run deploy -- --network preview` çalıştırıldı:
+  - preview cüzdanı üretildi, recovery phrase `.midnight-state.json`'a yazıldı
+  - **cüzdan senkronizasyonu ~11 dakika sürdü** (preview'ın geçmişi uzun) — script'in
+    adresi ancak sync sonrası yazdırması bekleme süresini uzatıyor
+  - kullanıcı faucet'ten fonladı; fon sync sırasında düştüğü için script faucet
+    bekleme bloğunu tamamen atladı ve doğrudan DUST kaydına geçti
+  - DUST üretildi, deploy **ilk denemede** başarılı
+- **Contract address: `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27`**
+- Preview indexer'ından bağımsız doğrulama yapıldı: `ContractDeploy`, tx
+  `691315e5…`, blok 1 025 537
+- README Contract Address tablosu dolduruldu; tx hash, blok ve **çalıştığı test edilmiş**
+  bir doğrulama curl komutu eklendi
+- Level 1 resmî çeklistinin 7 maddesi de ✅. Kalan: kullanıcının elle yapacakları
+  (`## Initial Idea`, screenshot, Rise In submit)
 
 ### 2026-09-25 — Oturum 2
 - Proje durumu doğrulandı: testler 13/13 geçiyor, typecheck temiz, git senkron

@@ -12,10 +12,26 @@ DataZero is built for the **Monthly Moonshots on Midnight** builder journey. Thi
 
 | Network | Address |
 |---------|---------|
-| Preview | `[PASTE ADDRESS AFTER DEPLOY]` |
-| Preprod | `[PASTE ADDRESS AFTER DEPLOY]` |
+| **Preview** | `3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27` |
+| Preprod | *not deployed* |
 
-> `npm run deploy -- --network preview` prints the address in a box when it finishes, and also writes it to `.midnight-state.json`. Paste it into the table above.
+| | |
+|---|---|
+| Deploy tx | `691315e59a31426af0a617ad72de884d86e8dd8fb4c6880463b1a784e91057fc` |
+| Block | 1 025 537 |
+| Deployer | `mn_addr_preview1mu3x3q4vscpkqk63p36e6ss0qs0s3t5kqjl2epetgvpdyh8rcdgsjd80nm` |
+
+Verify it yourself against the public Preview indexer — no local setup needed:
+
+```bash
+curl -s https://indexer.preview.midnight.network/api/v4/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ contractAction(address:\"3e4acbedf8faba89e300173329e6bd8505d252817bf0a3310f5c9e5d5b6ced27\") { __typename address transaction { hash block { height } } } }"}'
+```
+
+It returns `"__typename": "ContractDeploy"` with the transaction hash above.
+
+> `npm run deploy -- --network preview` prints the address in a box when it finishes, and also writes it to `.midnight-state.json`.
 
 ---
 
