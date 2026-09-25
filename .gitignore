@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Compiled Compact artifacts.
+# The generated TypeScript bindings under managed/<contract>/contract are kept
+# in the repo so the contract's public API is readable without a compiler.
+# Proving keys and ZKIR are large build outputs -- `npm run compile` recreates
+# them from contracts/counter.compact.
+managed/**/keys/
+managed/**/zkir/
+
+# Deployment info
+deployment.json
+
+# Wallet seed (sensitive)
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+
+# Private state
+*-state/
+
+# Temporary files
+tmp/
+temp/
+
+# Midnight network state (per-network seeds, deploy addresses)
+.midnight-state.json
+
+# Midnight wallet sync state (per-network serialized wallet state cache)
+.midnight-wallet-state/
+
+# Screenshots scratch space (add the ones you keep to docs/ instead)
+*.tmp.png
